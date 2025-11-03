@@ -139,11 +139,14 @@ runs:
       run: |
         SPEC="${{ inputs.locust_version }}"
         if [[ -n "$SPEC" ]]; then
-          if [[ "$SPEC" =~ ^[<>=!~] ]]; then
-            python -m pip install "locust$SPEC"
-          else
-            python -m pip install "locust==$SPEC"
-          fi
+          case "${SPEC:0:1}" in
+            '<'|'>'|'='|'!'|'~')
+              python -m pip install "locust$SPEC"
+              ;;
+            *)
+              python -m pip install "locust==$SPEC"
+              ;;
+          esac
         else
           python -m pip install locust
         fi
