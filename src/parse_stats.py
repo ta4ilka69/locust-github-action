@@ -60,13 +60,67 @@ def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, 
     # global p95 by taking the max of endpoint p95 (conservative).
     # A more accurate approach requires raw samples which we don't have.
     p95_max = 0.0
+    # Fallbacks from aggregated row if needed
+    agg_requests = 0
+    agg_failures = 0
+    agg_avg_rt = float("nan")
+    agg_p95 = float("nan")
 
     for row in rows:
         if not row:
             continue
-        # Skip rows that are not request stats (e.g., "Aggregated") if present
+        # Handle aggregated row specially for fallback totals
         name = (row.get("Name") or row.get("name") or "").strip()
         if name.lower() in {"aggregated", "total", "sum"}:
+            agg_requests = safe_int(
+                get_value(
+                    row,
+                    [
+                        "Requests",
+                        "# requests",
+                        "# reqs",
+                        "reqs",
+                        "num_requests",
+                        "requests",
+                        "Request Count",
+                        "Total Requests",
+                    ],
+                )
+            )
+            agg_failures = safe_int(
+                get_value(
+                    row,
+                    [
+                        "Failures",
+                        "# failures",
+                        "# fails",
+                        "fails",
+                        "num_failures",
+                        "failures",
+                    ],
+                )
+            )
+            agg_avg_rt = safe_float(
+                get_value(
+                    row,
+                    [
+                        "Average response time",
+                        "Average Response Time",
+                        "avg_response_time",
+                        "AverageResponseTime",
+                    ],
+                )
+            )
+            agg_p95 = safe_float(
+                get_value(
+                    row,
+                    [
+                        "95%",
+                        "95th percentile",
+                        "p95",
+                    ],
+                )
+            )
             continue
 
         num_requests = safe_int(
@@ -79,6 +133,8 @@ def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, 
                     "reqs",
                     "num_requests",
                     "requests",
+                    "Request Count",
+                    "Total Requests",
                 ],
             )
         )
@@ -125,6 +181,15 @@ def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, 
 
         if not math.isnan(p95_rt):
             p95_max = max(p95_max, p95_rt)
+
+    # Fallback to aggregated row totals if we failed to aggregate request rows
+    if total_requests == 0 and agg_requests > 0:
+        total_requests = agg_requests
+        total_failures = agg_failures
+        if not math.isnan(agg_avg_rt):
+            weighted_sum_avg_rt = agg_avg_rt * total_requests
+        if not math.isnan(agg_p95):
+            p95_max = max(p95_max, agg_p95)
 
     fail_ratio = (total_failures / total_requests) if total_requests > 0 else 0.0
     avg_response_time = (weighted_sum_avg_rt / total_requests) if total_requests > 0 else 0.0
