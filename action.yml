@@ -122,6 +122,10 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python_version }}
+        cache: pip
+        cache-dependency-path: |
+          ${{ inputs.requirements }}
+          **/requirements.txt
 
     - name: Upgrade pip
       shell: bash
