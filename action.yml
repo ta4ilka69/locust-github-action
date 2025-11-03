@@ -118,14 +118,39 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up Python
+    - name: Find dependency files for cache
+      id: find_deps
+      shell: bash
+      run: |
+        set -euo pipefail
+        DEP_PATH=""
+        if [[ -n "${{ inputs.requirements }}" && -f "${{ inputs.requirements }}" ]]; then
+          DEP_PATH="${{ inputs.requirements }}"
+        elif [[ -f "requirements.txt" ]]; then
+          DEP_PATH="requirements.txt"
+        elif [[ -f "pyproject.toml" ]]; then
+          DEP_PATH="pyproject.toml"
+        fi
+        if [[ -n "$DEP_PATH" ]]; then
+          echo "dep_found=true" >> "$GITHUB_OUTPUT"
+          echo "dep_path=$DEP_PATH" >> "$GITHUB_OUTPUT"
+        else
+          echo "dep_found=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Set up Python (cached)
+      if: ${{ steps.find_deps.outputs.dep_found == 'true' }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python_version }}
         cache: pip
-        cache-dependency-path: |
-          ${{ inputs.requirements }}
-          **/requirements.txt
+        cache-dependency-path: ${{ steps.find_deps.outputs.dep_path }}
+
+    - name: Set up Python
+      if: ${{ steps.find_deps.outputs.dep_found != 'true' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
 
     - name: Upgrade pip
       shell: bash
