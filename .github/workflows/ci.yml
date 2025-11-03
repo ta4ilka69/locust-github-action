@@ -11,12 +11,53 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Start local test server
+        run: |
+          nohup python - <<'PY' > server.log 2>&1 &
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          import time
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  if self.path.startswith('/status/'):
+                      try:
+                          code = int(self.path.split('/')[2])
+                      except Exception:
+                          code = 200
+                      self.send_response(code)
+                      self.end_headers()
+                      return
+                  if self.path.startswith('/delay/'):
+                      try:
+                          sec = float(self.path.split('/')[2])
+                      except Exception:
+                          sec = 0.0
+                      time.sleep(sec)
+                      self.send_response(200)
+                      self.end_headers()
+                      self.wfile.write(b'OK')
+                      return
+                  if self.path == '/' or self.path == '':
+                      self.send_response(200)
+                      self.end_headers()
+                      self.wfile.write(b'OK')
+                      return
+                  self.send_response(404)
+                  self.end_headers()
+              def log_message(self, fmt, *args):
+                  pass
+
+          HTTPServer(('127.0.0.1', 8000), Handler).serve_forever()
+          PY
+          echo $! > server.pid
+          sleep 2
+
       - name: Run Locust example (pass)
         id: run_pass
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          host: https://httpbin.org
+          host: http://127.0.0.1:8000
           users: 5
           spawn_rate: 5
           run_time: 10s
@@ -39,11 +80,57 @@ jobs:
           echo "total_failures=${{ steps.run_pass.outputs.total_failures }}"
           echo "thresholds_passed=${{ steps.run_pass.outputs.thresholds_passed }}"
 
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
+
   locust-fail:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Start local test server
+        run: |
+          nohup python - <<'PY' > server.log 2>&1 &
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          import time
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  if self.path.startswith('/status/'):
+                      try:
+                          code = int(self.path.split('/')[2])
+                      except Exception:
+                          code = 200
+                      self.send_response(code)
+                      self.end_headers()
+                      return
+                  if self.path.startswith('/delay/'):
+                      try:
+                          sec = float(self.path.split('/')[2])
+                      except Exception:
+                          sec = 0.0
+                      time.sleep(sec)
+                      self.send_response(200)
+                      self.end_headers()
+                      self.wfile.write(b'OK')
+                      return
+                  if self.path == '/' or self.path == '':
+                      self.send_response(200)
+                      self.end_headers()
+                      self.wfile.write(b'OK')
+                      return
+                  self.send_response(404)
+                  self.end_headers()
+              def log_message(self, fmt, *args):
+                  pass
+
+          HTTPServer(('127.0.0.1', 8000), Handler).serve_forever()
+          PY
+          echo $! > server.pid
+          sleep 2
 
       - name: Create failing locustfile
         run: |
@@ -65,7 +152,7 @@ jobs:
         continue-on-error: true
         with:
           locust_file: examples/failing/locustfile.py
-          host: https://httpbin.org
+          host: http://127.0.0.1:8000
           users: 2
           spawn_rate: 2
           run_time: 5s
@@ -80,4 +167,9 @@ jobs:
             echo "Expected failure but step succeeded" >&2
             exit 1
           fi
+
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
 
