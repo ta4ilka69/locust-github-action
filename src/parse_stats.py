@@ -4,7 +4,7 @@ import csv
 import math
 import os
 import sys
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 
 def read_stats_csv(csv_path: str) -> List[Dict[str, str]]:
@@ -19,21 +19,36 @@ def read_stats_csv(csv_path: str) -> List[Dict[str, str]]:
     return rows
 
 
-def safe_int(value: str) -> int:
+def safe_int(value: Optional[str]) -> int:
     try:
-        return int(value)
+        return int(value) if value is not None else 0
     except Exception:
         try:
-            return int(float(value))
+            return int(float(value)) if value is not None else 0
         except Exception:
             return 0
 
 
-def safe_float(value: str) -> float:
+def safe_float(value: Optional[str]) -> float:
     try:
-        return float(value)
+        return float(value) if value is not None else float("nan")
     except Exception:
         return float("nan")
+
+
+def normalize_key(key: str) -> str:
+    return "".join(ch for ch in key.lower() if ch.isalnum())
+
+
+def get_value(row: Dict[str, str], candidates: List[str]) -> Optional[str]:
+    if not row:
+        return None
+    norm_map = {normalize_key(k): v for k, v in row.items()}
+    for cand in candidates:
+        v = norm_map.get(normalize_key(cand))
+        if v is not None and v != "":
+            return v
+    return None
 
 
 def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, int, int]:
@@ -55,21 +70,52 @@ def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, 
             continue
 
         num_requests = safe_int(
-            row.get("Requests")
-            or row.get("# requests")
-            or row.get("num_requests")
-            or row.get("requests")
-            or "0"
+            get_value(
+                row,
+                [
+                    "Requests",
+                    "# requests",
+                    "# reqs",
+                    "reqs",
+                    "num_requests",
+                    "requests",
+                ],
+            )
         )
         num_failures = safe_int(
-            row.get("Failures")
-            or row.get("# failures")
-            or row.get("num_failures")
-            or row.get("failures")
-            or "0"
+            get_value(
+                row,
+                [
+                    "Failures",
+                    "# failures",
+                    "# fails",
+                    "fails",
+                    "num_failures",
+                    "failures",
+                ],
+            )
         )
-        avg_rt = safe_float(row.get("Average response time") or row.get("avg_response_time") or row.get("Average Response Time") or "nan")
-        p95_rt = safe_float(row.get("95%") or row.get("95th percentile") or row.get("p95") or "nan")
+        avg_rt = safe_float(
+            get_value(
+                row,
+                [
+                    "Average response time",
+                    "Average Response Time",
+                    "avg_response_time",
+                    "AverageResponseTime",
+                ],
+            )
+        )
+        p95_rt = safe_float(
+            get_value(
+                row,
+                [
+                    "95%",
+                    "95th percentile",
+                    "p95",
+                ],
+            )
+        )
 
         total_requests += num_requests
         total_failures += num_failures
