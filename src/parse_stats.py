@@ -109,6 +109,15 @@ def main() -> int:
 
     thresholds_passed = True
     reasons: List[str] = []
+    any_threshold = (
+        args.check_fail_ratio is not None
+        or args.check_avg_response_time is not None
+        or args.check_p95_response_time is not None
+    )
+    # If thresholds are set but we have no requests (or CSV was missing), fail conservatively
+    if any_threshold and total_requests == 0:
+        thresholds_passed = False
+        reasons.append("no requests found (CSV missing or empty)")
     if args.check_fail_ratio is not None and fail_ratio > args.check_fail_ratio:
         thresholds_passed = False
         reasons.append(f"fail_ratio {fail_ratio:.4f} > {args.check_fail_ratio:.4f}")
