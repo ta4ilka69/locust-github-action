@@ -13,7 +13,7 @@ jobs:
 
       - name: Run Locust example (pass)
         id: run_pass
-        uses: ./. 
+        uses: ./.
         with:
           locust-file: examples/basic/locustfile.py
           host: https://httpbin.org
@@ -48,20 +48,20 @@ jobs:
       - name: Create failing locustfile
         run: |
           mkdir -p examples/failing
-          cat > examples/failing/locustfile.py << 'PY'
-from locust import HttpUser, task, between
-
-class FailingUser(HttpUser):
-    wait_time = between(0.1, 0.2)
-
-    @task
-    def fail(self):
-        self.client.get("/status/500", name="fail")
-PY
+          printf '%s\n' \
+            'from locust import HttpUser, task, between' \
+            '' \
+            'class FailingUser(HttpUser):' \
+            '    wait_time = between(0.1, 0.2)' \
+            '' \
+            '    @task' \
+            '    def fail(self):' \
+            '        self.client.get("/status/500", name="fail")' \
+            > examples/failing/locustfile.py
 
       - name: Run Locust example (expected fail)
         id: run_fail
-        uses: ./. 
+        uses: ./.
         continue-on-error: true
         with:
           locust-file: examples/failing/locustfile.py
