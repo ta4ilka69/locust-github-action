@@ -15,20 +15,20 @@ jobs:
         id: run_pass
         uses: ./.
         with:
-          locust-file: examples/basic/locustfile.py
+          locust_file: examples/basic/locustfile.py
           host: https://httpbin.org
           users: 5
-          spawn-rate: 5
-          run-time: 10s
-          log-level: INFO
-          check-fail-ratio: 0.05
-          check-avg-response-time: 4000
-          check-p95-response-time: 8000
-          output-dir: locust-report
-          csv-prefix: locust_stats
-          html-report: true
-          upload-artifacts: true
-          artifact-name: locust-report-pass
+          spawn_rate: 5
+          run_time: 10s
+          log_level: INFO
+          check_fail_ratio: 0.05
+          check_avg_response_time: 4000
+          check_p95_response_time: 8000
+          output_dir: locust-report
+          csv_prefix: locust_stats
+          html_report: true
+          upload_artifacts: true
+          artifact_name: locust-report-pass
 
       - name: Print outputs
         run: |
@@ -64,13 +64,13 @@ jobs:
         uses: ./.
         continue-on-error: true
         with:
-          locust-file: examples/failing/locustfile.py
+          locust_file: examples/failing/locustfile.py
           host: https://httpbin.org
           users: 2
-          spawn-rate: 2
-          run-time: 5s
-          check-fail-ratio: 0.0
-          upload-artifacts: false
+          spawn_rate: 2
+          run_time: 5s
+          check_fail_ratio: 0.0
+          upload_artifacts: false
 
       - name: Assert failure occurred
         if: always()

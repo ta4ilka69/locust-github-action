@@ -28,42 +28,42 @@ jobs:
       - name: Run Locust
         uses: ./. # or locustio/run-locust-action@v1 once published
         with:
-          locust-file: tests/locustfile.py
+          locust_file: tests/locustfile.py
           host: https://your-app.example.com
           users: 50
-          spawn-rate: 10
-          run-time: 2m
-          check-fail-ratio: 0.02
-          check-avg-response-time: 500
-          check-p95-response-time: 1000
-          upload-artifacts: true
+          spawn_rate: 10
+          run_time: 2m
+          check_fail_ratio: 0.02
+          check_avg_response_time: 500
+          check_p95_response_time: 1000
+          upload_artifacts: true
 ```
 
 Tip: This action uses bash in its internal steps. We recommend running on `ubuntu-latest`.
 
 ## Inputs
 
-- `locust-file` (required): Path to your `locustfile.py`.
+- `locust_file` (required): Path to your `locustfile.py`.
 - `host` (required): Target host, for example `https://example.com`.
 - `users`: Number of simulated users (`-u`).
-- `spawn-rate`: Users spawned per second (`-r`).
-- `run-time`: Test duration, e.g. `30s`, `2m`.
+- `spawn_rate`: Users spawned per second (`-r`).
+- `run_time`: Test duration, e.g. `30s`, `2m`.
 - `headless`: Run Locust headless (default `true`).
 - `tags`: Run only tasks with any of these tags (comma-separated).
-- `exclude-tags`: Exclude tasks with any of these tags (comma-separated).
-- `log-level`: Locust log level (default `INFO`).
-- `additional-args`: Extra arguments appended to the Locust command.
-- `check-fail-ratio`: Max allowed failure ratio (0-1).
-- `check-avg-response-time`: Max allowed average response time (ms).
-- `check-p95-response-time`: Max allowed 95th percentile response time (ms).
-- `python-version`: Python version (default `3.11`).
-- `locust-version`: Locust version specifier (e.g. `2.29.1`, `~=2.29`).
+- `exclude_tags`: Exclude tasks with any of these tags (comma-separated).
+- `log_level`: Locust log level (default `INFO`).
+- `additional_args`: Extra arguments appended to the Locust command.
+- `check_fail_ratio`: Max allowed failure ratio (0-1).
+- `check_avg_response_time`: Max allowed average response time (ms).
+- `check_p95_response_time`: Max allowed 95th percentile response time (ms).
+- `python_version`: Python version (default `3.11`).
+- `locust_version`: Locust version specifier (e.g. `2.29.1`, `~=2.29`).
 - `requirements`: Optional `requirements.txt` to install before running.
-- `output-dir`: Directory to place reports (default `locust-report`).
-- `csv-prefix`: CSV filename prefix (default `locust_stats`).
-- `html-report`: Generate HTML report (default `true`).
-- `upload-artifacts`: Upload CSV/HTML as artifacts (default `true`).
-- `artifact-name`: Artifact name (default `locust-report`).
+- `output_dir`: Directory to place reports (default `locust-report`).
+- `csv_prefix`: CSV filename prefix (default `locust_stats`).
+- `html_report`: Generate HTML report (default `true`).
+- `upload_artifacts`: Upload CSV/HTML as artifacts (default `true`).
+- `artifact_name`: Artifact name (default `locust-report`).
 
 ## Outputs
 
@@ -79,15 +79,15 @@ Tip: This action uses bash in its internal steps. We recommend running on `ubunt
 This repo includes an example at `examples/basic/locustfile.py` using `https://httpbin.org`. The CI workflow `.github/workflows/ci.yml` self-tests the action with:
 
 - A passing run (thresholds generous)
-- An expected failing run (enforces `check-fail-ratio: 0.0`)
+- An expected failing run (enforces `check_fail_ratio: 0.0`)
 
 ## How it works
 
 The action:
 
 1. Sets up Python and installs Locust (optionally your `requirements.txt`).
-2. Runs Locust headless with `--csv` (and `--html` if enabled) into `output-dir`.
-3. Parses the generated `<csv-prefix>_stats.csv` via `src/parse_stats.py` to compute:
+2. Runs Locust headless with `--csv` (and `--html` if enabled) into `output_dir`.
+3. Parses the generated `<csv_prefix>_stats.csv` via `src/parse_stats.py` to compute:
    - Failure ratio
    - Weighted average response time
    - Conservative global p95 (max of per-endpoint p95)
