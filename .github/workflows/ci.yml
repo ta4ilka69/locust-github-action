@@ -13,42 +13,7 @@ jobs:
 
       - name: Start local test server
         run: |
-          nohup python - <<'PY' > server.log 2>&1 &
-          from http.server import BaseHTTPRequestHandler, HTTPServer
-          import time
-
-          class Handler(BaseHTTPRequestHandler):
-              def do_GET(self):
-                  if self.path.startswith('/status/'):
-                      try:
-                          code = int(self.path.split('/')[2])
-                      except Exception:
-                          code = 200
-                      self.send_response(code)
-                      self.end_headers()
-                      return
-                  if self.path.startswith('/delay/'):
-                      try:
-                          sec = float(self.path.split('/')[2])
-                      except Exception:
-                          sec = 0.0
-                      time.sleep(sec)
-                      self.send_response(200)
-                      self.end_headers()
-                      self.wfile.write(b'OK')
-                      return
-                  if self.path == '/' or self.path == '':
-                      self.send_response(200)
-                      self.end_headers()
-                      self.wfile.write(b'OK')
-                      return
-                  self.send_response(404)
-                  self.end_headers()
-              def log_message(self, fmt, *args):
-                  pass
-
-          HTTPServer(('127.0.0.1', 8000), Handler).serve_forever()
-          PY
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
           echo $! > server.pid
           sleep 2
 
@@ -85,6 +50,191 @@ jobs:
         run: |
           if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
 
+  missing-host:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run without host (should fail)
+        id: no_host
+        uses: ./.
+        continue-on-error: true
+        with:
+          locust_file: examples/basic/locustfile.py
+
+      - name: Assert failure (missing host)
+        run: |
+          echo "Step outcome: ${{ steps.no_host.outcome }}"
+          if [ "${{ steps.no_host.outcome }}" != "failure" ]; then
+            echo "Expected failure due to missing host" >&2
+            exit 1
+          fi
+
+  missing-locustfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run without locust_file (should fail)
+        id: no_locustfile
+        uses: ./.
+        continue-on-error: true
+        with:
+          host: http://127.0.0.1:8000
+
+      - name: Assert failure (missing locust_file)
+        run: |
+          echo "Step outcome: ${{ steps.no_locustfile.outcome }}"
+          if [ "${{ steps.no_locustfile.outcome }}" != "failure" ]; then
+            echo "Expected failure due to missing locust_file" >&2
+            exit 1
+          fi
+
+  tags-include-fast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use tags example
+        run: echo "Using examples/tags/locustfile.py"
+
+      - name: Start local test server
+        run: |
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 2
+
+      - name: Run with tags include (fast)
+        uses: ./.
+        with:
+          locust_file: examples/tags/locustfile.py
+          host: http://127.0.0.1:8000
+          users: 4
+          spawn_rate: 4
+          run_time: 6s
+          tags: fast
+          check_fail_ratio: 0.0
+          check_avg_response_time: 5000
+          check_p95_response_time: 10000
+          upload_artifacts: false
+
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
+
+  tags-exclude-slow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use tags example
+        run: echo "Using examples/tags/locustfile.py"
+
+      - name: Start local test server
+        run: |
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 2
+
+      - name: Run with exclude-tags (slow)
+        uses: ./.
+        with:
+          locust_file: examples/tags/locustfile.py
+          host: http://127.0.0.1:8000
+          users: 4
+          spawn_rate: 4
+          run_time: 6s
+          exclude_tags: slow
+          check_fail_ratio: 0.0
+          check_avg_response_time: 5000
+          check_p95_response_time: 10000
+          upload_artifacts: false
+
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
+
+  custom-outputs-and-args:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start local test server
+        run: |
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 2
+
+      - name: Run with custom outputs and args
+        uses: ./.
+        with:
+          locust_file: examples/basic/locustfile.py
+          host: http://127.0.0.1:8000
+          users: 3
+          spawn_rate: 3
+          run_time: 5s
+          log_level: DEBUG
+          additional_args: --stop-timeout 1
+          output_dir: out
+          csv_prefix: my_stats
+          html_report: false
+          upload_artifacts: false
+          check_fail_ratio: 0.0
+          check_avg_response_time: 5000
+          check_p95_response_time: 10000
+
+      - name: Verify CSV exists
+        run: |
+          test -f out/my_stats_stats.csv
+
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
+
+  version-pin-and-reqs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create requirements
+        run: |
+          echo 'requests==2.32.4' > requirements.txt
+
+      - name: Start local test server
+        run: |
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 2
+
+      - name: Run with pinned versions
+        uses: ./.
+        with:
+          python_version: "3.12"
+          locust_version: "2.42.1"
+          requirements: requirements.txt
+          locust_file: examples/basic/locustfile.py
+          host: http://127.0.0.1:8000
+          users: 2
+          spawn_rate: 2
+          run_time: 5s
+          upload_artifacts: false
+          check_fail_ratio: 0.0
+          check_avg_response_time: 5000
+          check_p95_response_time: 10000
+
+      - name: Stop local test server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
   locust-fail:
     runs-on: ubuntu-latest
     steps:
@@ -93,58 +243,12 @@ jobs:
 
       - name: Start local test server
         run: |
-          nohup python - <<'PY' > server.log 2>&1 &
-          from http.server import BaseHTTPRequestHandler, HTTPServer
-          import time
-
-          class Handler(BaseHTTPRequestHandler):
-              def do_GET(self):
-                  if self.path.startswith('/status/'):
-                      try:
-                          code = int(self.path.split('/')[2])
-                      except Exception:
-                          code = 200
-                      self.send_response(code)
-                      self.end_headers()
-                      return
-                  if self.path.startswith('/delay/'):
-                      try:
-                          sec = float(self.path.split('/')[2])
-                      except Exception:
-                          sec = 0.0
-                      time.sleep(sec)
-                      self.send_response(200)
-                      self.end_headers()
-                      self.wfile.write(b'OK')
-                      return
-                  if self.path == '/' or self.path == '':
-                      self.send_response(200)
-                      self.end_headers()
-                      self.wfile.write(b'OK')
-                      return
-                  self.send_response(404)
-                  self.end_headers()
-              def log_message(self, fmt, *args):
-                  pass
-
-          HTTPServer(('127.0.0.1', 8000), Handler).serve_forever()
-          PY
+          nohup python examples/server/simple_server.py > server.log 2>&1 &
           echo $! > server.pid
           sleep 2
 
-      - name: Create failing locustfile
-        run: |
-          mkdir -p examples/failing
-          printf '%s\n' \
-            'from locust import HttpUser, task, between' \
-            '' \
-            'class FailingUser(HttpUser):' \
-            '    wait_time = between(0.1, 0.2)' \
-            '' \
-            '    @task' \
-            '    def fail(self):' \
-            '        self.client.get("/status/500", name="fail")' \
-            > examples/failing/locustfile.py
+      - name: Use failing example
+        run: echo "Using examples/failing/locustfile.py"
 
       - name: Run Locust example (expected fail)
         id: run_fail
@@ -172,4 +276,3 @@ jobs:
         if: always()
         run: |
           if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
-
