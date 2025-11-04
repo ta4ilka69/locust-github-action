@@ -183,6 +183,23 @@ runs:
         echo "out_dir=$OUT_DIR" >> "$GITHUB_OUTPUT"
         echo "csv_prefix=${{ inputs.csv_prefix }}" >> "$GITHUB_OUTPUT"
 
+    - name: Validate required inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -z "${{ inputs.host }}" ]]; then
+          echo "Input 'host' is required and must be non-empty" >&2
+          exit 1
+        fi
+        if [[ -z "${{ inputs.locust_file }}" ]]; then
+          echo "Input 'locust_file' is required and must be provided" >&2
+          exit 1
+        fi
+        if [[ ! -f "${{ inputs.locust_file }}" ]]; then
+          echo "locust_file not found: ${{ inputs.locust_file }}" >&2
+          exit 1
+        fi
+
     - name: Run Locust
       id: run_locust
       shell: bash
@@ -253,5 +270,3 @@ runs:
         path: |
           ${{ steps.prep.outputs.out_dir }}/*.html
           ${{ steps.prep.outputs.out_dir }}/*.csv
-
-
