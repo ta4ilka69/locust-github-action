@@ -65,6 +65,13 @@ Tip: This action uses bash in its internal steps. We recommend running on `ubunt
 - `upload_artifacts`: Upload CSV/HTML as artifacts (default `true`).
 - `artifact_name`: Artifact name (default `locust-report`).
 
+## Caching and versions
+
+- pip cache: Enabled automatically via setup-python only when a dependency file is present: `with.requirements`, `requirements.txt`, or `pyproject.toml`. In that case, Locust and other packages are installed using the pip cache. If no dependency file is found, pip cache is not enabled.
+- To benefit from caching without an existing dependency file, either pass `requirements` pointing to a file, or create a minimal `requirements.txt` (for example: `locust==2.42.1`) and reference it via `with: requirements: requirements.txt`.
+- Locust version: Pin via `locust_version`. Supports exact pins and operators (`==`, `~=`, `<`, `>`, `=`, `!`, `~`). If not provided, the latest Locust will be installed.
+- Python version: Set via `python_version` (default `3.11`).
+
 ## Outputs
 
 - `fail_ratio`: Aggregated failure ratio.
