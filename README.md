@@ -87,22 +87,12 @@ The action:
 
 1. Sets up Python and installs Locust (optionally your `requirements.txt`).
 2. Runs Locust headless with `--csv` (and `--html` if enabled) into `output_dir`.
-3. Parses the generated `<csv_prefix>_stats.csv` via `src/parse_stats.py` to compute:
-   - Failure ratio
-   - Weighted average response time
-   - Conservative global p95 (max of per-endpoint p95)
+3. Parses the generated `<csv_prefix>_stats.csv` via `src/parse_stats.py` (using the `Aggregated` row) and derives:
+   - Failure ratio (failures/requests)
+   - Average response time (from `Aggregated`)
+   - P95 (from `Aggregated`)
 4. Enforces configured thresholds and sets step outputs. If thresholds are violated, the step fails.
 5. Optionally uploads the HTML/CSV artifacts.
-
-## Contributing / Roadmap
-
-Planned improvements:
-
-- Additional threshold types (RPS, median, per-endpoint thresholds)
-- Windows/macOS runner support guidance and tests
-- Richer summary annotations in job logs
-
-We intend to upstream this to the official Locust org pending feedback on [the proposal](https://github.com/locustio/locust/issues/3233).
 
 ## License
 

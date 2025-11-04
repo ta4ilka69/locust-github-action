@@ -44,8 +44,6 @@ inputs:
     description: "Additional raw args to append to the locust command"
     required: false
     default: ""
-
-  # Threshold checks
   check_fail_ratio:
     description: "Fail if (failures/requests) > this ratio (e.g., 0.02)"
     required: false
@@ -58,8 +56,6 @@ inputs:
     description: "Fail if aggregated 95th percentile response time (ms) > value"
     required: false
     default: ""
-
-  # Environment setup
   python_version:
     description: "Python version to use"
     required: false
@@ -72,8 +68,6 @@ inputs:
     description: "Path to requirements file to pip install before running"
     required: false
     default: ""
-
-  # Reports & artifacts
   output_dir:
     description: "Directory to place reports (HTML and CSVs)"
     required: false

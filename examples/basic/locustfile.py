@@ -11,5 +11,3 @@ class BasicUser(HttpUser):
     @task(1)
     def delayed(self):
         self.client.get("/delay/0.1", name="delay")
-
-
