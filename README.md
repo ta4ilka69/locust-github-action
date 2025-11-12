@@ -69,7 +69,7 @@ Tip: This action uses bash in its internal steps. We recommend running on `ubunt
 
 - pip cache: Enabled automatically via setup-python only when a dependency file is present: `with.requirements`, `requirements.txt`, or `pyproject.toml`. In that case, Locust and other packages are installed using the pip cache. If no dependency file is found, pip cache is not enabled.
 - To benefit from caching without an existing dependency file, either pass `requirements` pointing to a file, or create a minimal `requirements.txt` (for example: `locust==2.42.1`) and reference it via `with: requirements: requirements.txt`.
-- Locust version: Pin via `locust_version`. Supports exact pins and operators (`==`, `~=`, `<`, `>`, `=`, `!`, `~`). If not provided, the latest Locust will be installed.
+- Locust version: Pin via `locust_version`. Supports exact pins and operators (`==`, `~=`, `<`, `>`, `=`, `!`, `~`). If not provided, the latest Locust will be installed. If your requirements also pin Locust, `locust_version` (when set) takes precedence because Locust is installed after requirements.
 - Python version: Set via `python_version` (default `3.11`).
 
 ## Outputs
@@ -83,7 +83,7 @@ Tip: This action uses bash in its internal steps. We recommend running on `ubunt
 
 ## Example repository layout
 
-This repo includes an example at `examples/basic/locustfile.py` using `https://httpbin.org`. The CI workflow `.github/workflows/ci.yml` self-tests the action with:
+This repo includes an example at `examples/basic/locustfile.py` compatible with `https://httpbin.org`. The CI workflow `.github/workflows/ci.yml` uses a local simple HTTP server and self-tests the action with:
 
 - A passing run (thresholds generous)
 - An expected failing run (enforces `check_fail_ratio: 0.0`)
@@ -92,7 +92,7 @@ This repo includes an example at `examples/basic/locustfile.py` using `https://h
 
 The action:
 
-1. Sets up Python and installs Locust (optionally your `requirements.txt`).
+1. Sets up Python, installs your `requirements` (if provided), then installs Locust (honoring `locust_version` when set).
 2. Runs Locust headless with `--csv` (and `--html` if enabled) into `output_dir`.
 3. Parses the generated `<csv_prefix>_stats.csv` via `src/parse_stats.py` (using the `Aggregated` row) and derives:
    - Failure ratio (failures/requests)
