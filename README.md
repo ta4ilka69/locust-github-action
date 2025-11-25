@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install locust
@@ -57,7 +57,7 @@ Also, remember to include a finite run time (e.g. `-t 10s`) in `with.args` to av
 Use standard actions to prepare Python and dependencies (this action does not install Python or Locust):
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v6
   with:
     python-version: '3.12'
     cache: pip
@@ -87,7 +87,7 @@ This repo includes an example at `examples/basic/locustfile.py` compatible with 
 We recommend setting up Python in your workflow before invoking this action, for maximum control and flexibility:
 
 ```yaml
-- uses: actions/setup-python@v5
+- uses: actions/setup-python@v6
   with:
     python-version: '3.12'
     cache: pip
