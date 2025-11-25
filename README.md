@@ -40,6 +40,7 @@ jobs:
 ```
 
 Tip: This action uses bash in its internal steps. We recommend running on `ubuntu-latest`.
+Also, remember to include a finite run time (e.g. `-t 10s`) in `with.args` to avoid an indefinitely running job.
 
 ## Inputs
 

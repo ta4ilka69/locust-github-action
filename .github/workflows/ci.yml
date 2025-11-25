@@ -65,6 +65,8 @@ jobs:
         continue-on-error: true
         with:
           locust_file: examples/basic/locustfile.py
+          args: "-t 2s"
+          upload_artifacts: false
 
       - name: Assert failure (missing host)
         run: |
@@ -91,7 +93,8 @@ jobs:
         uses: ./.
         continue-on-error: true
         with:
-          args: --host http://127.0.0.1:8000
+          args: "--host http://127.0.0.1:8000 -t 2s"
+          upload_artifacts: false
 
       - name: Assert failure (missing locust_file)
         run: |
