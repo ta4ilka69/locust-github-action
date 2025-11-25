@@ -28,7 +28,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          args: --host http://127.0.0.1:8000 -u 5 -r 5 -t 10s --loglevel INFO
+          args: "--host http://127.0.0.1:8000 -u 5 -r 5 -t 10s --loglevel INFO"
           csv_base: locust-report/locust_stats
           html_report: true
           upload_artifacts: true
@@ -126,7 +126,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/tags/locustfile.py
-          args: --host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --tags fast
+          args: "--host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --tags fast"
           upload_artifacts: false
 
       - name: Stop local test server
@@ -159,7 +159,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/tags/locustfile.py
-          args: --host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --exclude-tags slow
+          args: "--host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --exclude-tags slow"
           upload_artifacts: false
 
       - name: Stop local test server
@@ -189,7 +189,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          args: --host http://127.0.0.1:8000 -u 3 -r 3 -t 5s --loglevel DEBUG --stop-timeout 1
+          args: "--host http://127.0.0.1:8000 -u 3 -r 3 -t 5s --loglevel DEBUG --stop-timeout 1"
           csv_base: out/my_stats
           html_report: false
           upload_artifacts: false
@@ -208,17 +208,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Create requirements
+        run: |
+          echo 'locust==2.42.1' > requirements.txt
+          echo 'requests==2.32.4' >> requirements.txt
       - name: Setup Python (cached)
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
-
-      - name: Create requirements
-        run: |
-          echo 'locust==2.42.1' > requirements.txt
-          echo 'requests==2.32.4' >> requirements.txt
       - name: Install from requirements
         run: pip install -r requirements.txt
 
@@ -232,7 +231,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          args: --host http://127.0.0.1:8000 -u 2 -r 2 -t 5s
+          args: "--host http://127.0.0.1:8000 -u 2 -r 2 -t 5s"
           csv_base: locust-report/locust_stats
           upload_artifacts: false
 

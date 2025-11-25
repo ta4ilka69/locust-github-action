@@ -33,7 +33,7 @@ jobs:
         uses: ./. # or locustio/run-locust-action@v1 once published
         with:
           locust_file: tests/locustfile.py
-          args: --host https://your-app.example.com -u 50 -r 10 -t 2m
+          args: "--host https://your-app.example.com -u 50 -r 10 -t 2m"
           csv_base: locust-report/locust_stats
           html_report: true
           upload_artifacts: true
@@ -100,7 +100,7 @@ Then call this action:
   uses: ./. # or locustio/run-locust-action@v1
   with:
     locust_file: examples/basic/locustfile.py
-    args: --host http://127.0.0.1:8000 -u 5 -r 5 -t 10s --tags fast --loglevel INFO
+    args: "--host http://127.0.0.1:8000 -u 5 -r 5 -t 10s --tags fast --loglevel INFO"
     csv_base: locust-report/locust_stats
 ```
 
