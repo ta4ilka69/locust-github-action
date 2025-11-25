@@ -10,6 +10,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Start local test server
         run: |
@@ -22,16 +28,8 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 5
-          spawn_rate: 5
-          run_time: 10s
-          log_level: INFO
-          check_fail_ratio: 0.05
-          check_avg_response_time: 4000
-          check_p95_response_time: 8000
-          output_dir: locust-report
-          csv_prefix: locust_stats
+          args: --host http://127.0.0.1:8000 -u 5 -r 5 -t 10s --loglevel INFO
+          csv_base: locust-report/locust_stats
           html_report: true
           upload_artifacts: true
           artifact_name: locust-report-pass
@@ -43,7 +41,6 @@ jobs:
           echo "p95_response_time=${{ steps.run_pass.outputs.p95_response_time }}"
           echo "total_requests=${{ steps.run_pass.outputs.total_requests }}"
           echo "total_failures=${{ steps.run_pass.outputs.total_failures }}"
-          echo "thresholds_passed=${{ steps.run_pass.outputs.thresholds_passed }}"
 
       - name: Stop local test server
         if: always()
@@ -55,6 +52,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Run without host (should fail)
         id: no_host
@@ -76,13 +79,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Run without locust_file (should fail)
         id: no_locustfile
         uses: ./.
         continue-on-error: true
         with:
-          host: http://127.0.0.1:8000
+          args: --host http://127.0.0.1:8000
 
       - name: Assert failure (missing locust_file)
         run: |
@@ -97,6 +106,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Use tags example
         run: echo "Using examples/tags/locustfile.py"
@@ -111,14 +126,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/tags/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 4
-          spawn_rate: 4
-          run_time: 6s
-          tags: fast
-          check_fail_ratio: 0.0
-          check_avg_response_time: 5000
-          check_p95_response_time: 10000
+          args: --host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --tags fast
           upload_artifacts: false
 
       - name: Stop local test server
@@ -131,6 +139,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Use tags example
         run: echo "Using examples/tags/locustfile.py"
@@ -145,14 +159,7 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/tags/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 4
-          spawn_rate: 4
-          run_time: 6s
-          exclude_tags: slow
-          check_fail_ratio: 0.0
-          check_avg_response_time: 5000
-          check_p95_response_time: 10000
+          args: --host http://127.0.0.1:8000 -u 4 -r 4 -t 6s --exclude-tags slow
           upload_artifacts: false
 
       - name: Stop local test server
@@ -165,6 +172,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Locust
+        run: pip install locust
 
       - name: Start local test server
         run: |
@@ -176,19 +189,10 @@ jobs:
         uses: ./.
         with:
           locust_file: examples/basic/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 3
-          spawn_rate: 3
-          run_time: 5s
-          log_level: DEBUG
-          additional_args: --stop-timeout 1
-          output_dir: out
-          csv_prefix: my_stats
+          args: --host http://127.0.0.1:8000 -u 3 -r 3 -t 5s --loglevel DEBUG --stop-timeout 1
+          csv_base: out/my_stats
           html_report: false
           upload_artifacts: false
-          check_fail_ratio: 0.0
-          check_avg_response_time: 5000
-          check_p95_response_time: 10000
 
       - name: Verify CSV exists
         run: |
@@ -204,10 +208,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python (cached)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Create requirements
         run: |
-          echo 'requests==2.32.4' > requirements.txt
+          echo 'locust==2.42.1' > requirements.txt
+          echo 'requests==2.32.4' >> requirements.txt
+      - name: Install from requirements
+        run: pip install -r requirements.txt
 
       - name: Start local test server
         run: |
@@ -218,59 +231,10 @@ jobs:
       - name: Run with pinned versions
         uses: ./.
         with:
-          python_version: "3.12"
-          locust_version: "2.42.1"
-          requirements: requirements.txt
           locust_file: examples/basic/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 2
-          spawn_rate: 2
-          run_time: 5s
+          args: --host http://127.0.0.1:8000 -u 2 -r 2 -t 5s
+          csv_base: locust-report/locust_stats
           upload_artifacts: false
-          check_fail_ratio: 0.0
-          check_avg_response_time: 5000
-          check_p95_response_time: 10000
-
-      - name: Stop local test server
-        if: always()
-        run: |
-          if [ -f server.pid ]; then kill "$(cat server.pid)" || true; fi
-  locust-fail:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Start local test server
-        run: |
-          nohup python examples/server/simple_server.py > server.log 2>&1 &
-          echo $! > server.pid
-          sleep 2
-
-      - name: Use failing example
-        run: echo "Using examples/failing/locustfile.py"
-
-      - name: Run Locust example (expected fail)
-        id: run_fail
-        uses: ./.
-        continue-on-error: true
-        with:
-          locust_file: examples/failing/locustfile.py
-          host: http://127.0.0.1:8000
-          users: 2
-          spawn_rate: 2
-          run_time: 5s
-          check_fail_ratio: 0.0
-          upload_artifacts: false
-
-      - name: Assert failure occurred
-        if: always()
-        run: |
-          echo "Step outcome: ${{ steps.run_fail.outcome }}"
-          if [ "${{ steps.run_fail.outcome }}" != "failure" ]; then
-            echo "Expected failure but step succeeded" >&2
-            exit 1
-          fi
 
       - name: Stop local test server
         if: always()
