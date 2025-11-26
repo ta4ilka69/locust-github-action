@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import csv
-import math
 import os
 import sys
 from typing import List, Dict, Tuple, Optional
@@ -9,7 +8,8 @@ from typing import List, Dict, Tuple, Optional
 
 def read_stats_csv(csv_path: str) -> List[Dict[str, str]]:
     if not os.path.exists(csv_path):
-        print(f"Stats CSV not found: {csv_path}", file=sys.stderr)
+        # CSV not found — return empty data and let callers get zeros.
+        print(f"Stats CSV not found (defaulting to zeros): {csv_path}")
         return []
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -124,17 +124,18 @@ def aggregate_metrics(rows: List[Dict[str, str]]) -> Tuple[float, float, float, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Parse Locust CSV stats and enforce thresholds")
-    parser.add_argument("--csv-path", required=True,
-                        help="Path to *_stats.csv produced by Locust --csv")
-    parser.add_argument("--check-fail-ratio", type=float,
-                        default=None, help="Max allowed failure ratio (0-1)")
-    parser.add_argument("--check-avg-response-time", type=float,
-                        default=None, help="Max allowed average response time (ms)")
-    parser.add_argument("--check-p95-response-time", type=float,
-                        default=None, help="Max allowed p95 response time (ms)")
-    parser.add_argument("--github-output", required=False,
-                        help="Path to GITHUB_OUTPUT file to write outputs")
+        description="Parse Locust CSV stats and emit summary metrics"
+    )
+    parser.add_argument(
+        "--csv-path",
+        required=True,
+        help="Path to *_stats.csv produced by Locust --csv",
+    )
+    parser.add_argument(
+        "--github-output",
+        required=False,
+        help="Path to GITHUB_OUTPUT file to write outputs",
+    )
     args = parser.parse_args()
 
     rows = read_stats_csv(args.csv_path)
@@ -150,32 +151,6 @@ def main() -> int:
         "total_failures": str(total_failures),
     }
 
-    thresholds_passed = True
-    reasons: List[str] = []
-    any_threshold = (
-        args.check_fail_ratio is not None
-        or args.check_avg_response_time is not None
-        or args.check_p95_response_time is not None
-    )
-    # If thresholds are set but we have no requests (or CSV missing), fail conservatively
-    if any_threshold and total_requests == 0:
-        thresholds_passed = False
-        reasons.append("no requests found (CSV missing or empty)")
-    if args.check_fail_ratio is not None and fail_ratio > args.check_fail_ratio:
-        thresholds_passed = False
-        reasons.append(
-            f"fail_ratio {fail_ratio:.4f} > {args.check_fail_ratio:.4f}")
-    if args.check_avg_response_time is not None and avg_rt > args.check_avg_response_time:
-        thresholds_passed = False
-        reasons.append(
-            f"avg_response_time {avg_rt:.2f}ms > {args.check_avg_response_time:.2f}ms")
-    if args.check_p95_response_time is not None and p95_rt > args.check_p95_response_time:
-        thresholds_passed = False
-        reasons.append(
-            f"p95_response_time {p95_rt:.2f}ms > {args.check_p95_response_time:.2f}ms")
-
-    outputs["thresholds_passed"] = "true" if thresholds_passed else "false"
-
     github_output_path = args.github_output or os.environ.get("GITHUB_OUTPUT")
     if github_output_path:
         with open(github_output_path, "a", encoding="utf-8") as f:
@@ -188,10 +163,6 @@ def main() -> int:
     print(f"  fail_ratio: {fail_ratio:.6f}")
     print(f"  avg_response_time: {avg_rt:.2f} ms")
     print(f"  p95_response_time: {p95_rt:.2f} ms")
-
-    if not thresholds_passed:
-        print("Thresholds failed: " + "; ".join(reasons), file=sys.stderr)
-        return 2
 
     return 0
 

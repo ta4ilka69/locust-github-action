@@ -8,74 +8,19 @@ branding:
 inputs:
   locust_file:
     description: "Path to locust file (e.g., tests/locustfile.py)"
-    required: true
-  host:
-    description: "Target host, e.g. https://example.com"
-    required: true
-  users:
-    description: "Number of simulated users (equivalent to -u/--users)"
+    required: false
+  args:
+    description: "Raw CLI args to append to the locust command (preferred over specific inputs)"
     required: false
     default: ""
-  spawn_rate:
-    description: "Rate to spawn users per second (equivalent to -r/--spawn-rate)"
+  config_file:
+    description: "Path to Locust config file passed with --config"
     required: false
     default: ""
-  run_time:
-    description: "Total run time (e.g., 2m, 30s)"
+  csv_base:
+    description: "Base path (dir/file) for Locust CSV/HTML reports, e.g. locust-report/locust_stats"
     required: false
-    default: ""
-  headless:
-    description: "Run in headless mode"
-    required: false
-    default: "true"
-  tags:
-    description: "Only run tasks with any of these tags (comma-separated)"
-    required: false
-    default: ""
-  exclude_tags:
-    description: "Exclude tasks with any of these tags (comma-separated)"
-    required: false
-    default: ""
-  log_level:
-    description: "Set locust log level (e.g., INFO, DEBUG)"
-    required: false
-    default: "INFO"
-  additional_args:
-    description: "Additional raw args to append to the locust command"
-    required: false
-    default: ""
-  check_fail_ratio:
-    description: "Fail if (failures/requests) > this ratio (e.g., 0.02)"
-    required: false
-    default: ""
-  check_avg_response_time:
-    description: "Fail if aggregated average response time (ms) > value"
-    required: false
-    default: ""
-  check_p95_response_time:
-    description: "Fail if aggregated 95th percentile response time (ms) > value"
-    required: false
-    default: ""
-  python_version:
-    description: "Python version to use"
-    required: false
-    default: "3.11"
-  locust_version:
-    description: "Locust version specifier (e.g., 2.29.1 or ~=2.29)"
-    required: false
-    default: ""
-  requirements:
-    description: "Path to requirements file to pip install before running"
-    required: false
-    default: ""
-  output_dir:
-    description: "Directory to place reports (HTML and CSVs)"
-    required: false
-    default: "locust-report"
-  csv_prefix:
-    description: "CSV filename prefix (without path)"
-    required: false
-    default: "locust_stats"
+    default: "locust-report/locust_stats"
   html_report:
     description: "Generate HTML report"
     required: false
@@ -105,162 +50,76 @@ outputs:
   total_failures:
     description: "Total number of failures"
     value: ${{ steps.parse.outputs.total_failures }}
-  thresholds_passed:
-    description: "Whether threshold checks passed"
-    value: ${{ steps.parse.outputs.thresholds_passed }}
 
 runs:
   using: "composite"
   steps:
-    - name: Find dependency files for cache
-      id: find_deps
-      shell: bash
-      run: |
-        set -euo pipefail
-        DEP_PATH=""
-        if [[ -n "${{ inputs.requirements }}" && -f "${{ inputs.requirements }}" ]]; then
-          DEP_PATH="${{ inputs.requirements }}"
-        elif [[ -f "requirements.txt" ]]; then
-          DEP_PATH="requirements.txt"
-        elif [[ -f "pyproject.toml" ]]; then
-          DEP_PATH="pyproject.toml"
-        fi
-        if [[ -n "$DEP_PATH" ]]; then
-          echo "dep_found=true" >> "$GITHUB_OUTPUT"
-          echo "dep_path=$DEP_PATH" >> "$GITHUB_OUTPUT"
-        else
-          echo "dep_found=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Set up Python (cached)
-      if: ${{ steps.find_deps.outputs.dep_found == 'true' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python_version }}
-        cache: pip
-        cache-dependency-path: ${{ steps.find_deps.outputs.dep_path }}
-
-    - name: Set up Python
-      if: ${{ steps.find_deps.outputs.dep_found != 'true' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python_version }}
-
-    - name: Upgrade pip
-      shell: bash
-      run: |
-        python -m pip install --upgrade pip
-
-    - name: Install requirements (optional)
-      if: ${{ inputs.requirements != '' }}
-      shell: bash
-      run: |
-        python -m pip install -r "${{ inputs.requirements }}"
-
-    - name: Install Locust
-      shell: bash
-      run: |
-        SPEC="${{ inputs.locust_version }}"
-        if [[ -n "$SPEC" ]]; then
-          case "${SPEC:0:1}" in
-            '<'|'>'|'='|'!'|'~')
-              python -m pip install "locust$SPEC"
-              ;;
-            *)
-              python -m pip install "locust==$SPEC"
-              ;;
-          esac
-        else
-          python -m pip install locust
-        fi
-
     - name: Prepare output directory
       id: prep
       shell: bash
       run: |
-        OUT_DIR="${{ inputs.output_dir }}"
-        mkdir -p "$OUT_DIR"
-        echo "out_dir=$OUT_DIR" >> "$GITHUB_OUTPUT"
-        echo "csv_prefix=${{ inputs.csv_prefix }}" >> "$GITHUB_OUTPUT"
+        set -euo pipefail
+        CSV_BASE="${{ inputs.csv_base }}"
+        CSV_DIR="$(dirname "$CSV_BASE")"
+        mkdir -p "$CSV_DIR"
+        echo "out_dir=$CSV_DIR" >> "$GITHUB_OUTPUT"
+        echo "csv_base=$CSV_BASE" >> "$GITHUB_OUTPUT"
 
     - name: Validate required inputs
       shell: bash
       run: |
         set -euo pipefail
-        if [[ -z "${{ inputs.host }}" ]]; then
-          echo "Input 'host' is required and must be non-empty" >&2
-          exit 1
-        fi
-        if [[ -z "${{ inputs.locust_file }}" ]]; then
-          echo "Input 'locust_file' is required and must be provided" >&2
-          exit 1
-        fi
-        if [[ ! -f "${{ inputs.locust_file }}" ]]; then
-          echo "locust_file not found: ${{ inputs.locust_file }}" >&2
-          exit 1
+        if [[ -n "${{ inputs.locust_file }}" ]]; then
+          if [[ ! -f "${{ inputs.locust_file }}" ]]; then
+            echo "locust_file not found: ${{ inputs.locust_file }}" >&2
+            exit 1
+          fi
         fi
 
     - name: Run Locust
       id: run_locust
       shell: bash
       run: |
-        set -euo pipefail
+        set -uo pipefail
         OUT_DIR="${{ steps.prep.outputs.out_dir }}"
-        CSV_PREFIX="${{ steps.prep.outputs.csv_prefix }}"
+        CSV_BASE="${{ steps.prep.outputs.csv_base }}"
         LOCUST_ARGS=(
-          -f "${{ inputs.locust_file }}"
-          --host "${{ inputs.host }}"
         )
-        if [[ "${{ inputs.headless }}" == "true" ]]; then
-          LOCUST_ARGS+=(--headless)
+        if [[ -n "${{ inputs.locust_file }}" ]]; then
+          LOCUST_ARGS+=(-f "${{ inputs.locust_file }}")
         fi
-        if [[ -n "${{ inputs.users }}" ]]; then
-          LOCUST_ARGS+=(-u "${{ inputs.users }}")
-        fi
-        if [[ -n "${{ inputs.spawn_rate }}" ]]; then
-          LOCUST_ARGS+=(-r "${{ inputs.spawn_rate }}")
-        fi
-        if [[ -n "${{ inputs.run_time }}" ]]; then
-          LOCUST_ARGS+=(-t "${{ inputs.run_time }}")
-        fi
-        if [[ -n "${{ inputs.tags }}" ]]; then
-          LOCUST_ARGS+=(--tags "${{ inputs.tags }}")
-        fi
-        if [[ -n "${{ inputs.exclude_tags }}" ]]; then
-          LOCUST_ARGS+=(--exclude-tags "${{ inputs.exclude_tags }}")
-        fi
-        if [[ -n "${{ inputs.log_level }}" ]]; then
-          LOCUST_ARGS+=(--loglevel "${{ inputs.log_level }}")
+        LOCUST_ARGS+=(--headless)
+        if [[ -n "${{ inputs.config_file }}" ]]; then
+          LOCUST_ARGS+=(--config "${{ inputs.config_file }}")
         fi
         if [[ "${{ inputs.html_report }}" == "true" ]]; then
-          LOCUST_ARGS+=(--html "$OUT_DIR/report.html")
+          LOCUST_ARGS+=(--html "${CSV_BASE}.html")
         fi
-        LOCUST_ARGS+=(--csv "$OUT_DIR/$CSV_PREFIX")
-        if [[ -n "${{ inputs.additional_args }}" ]]; then
-          read -r -a EXTRA <<< "${{ inputs.additional_args }}"
-          LOCUST_ARGS+=("${EXTRA[@]}")
+        LOCUST_ARGS+=(--csv "$CSV_BASE")
+        if [[ -n "${{ inputs.args }}" ]]; then
+          read -r -a EXTRA2 <<< "${{ inputs.args }}"
+          LOCUST_ARGS+=("${EXTRA2[@]}")
         fi
         echo "Running: locust ${LOCUST_ARGS[*]}"
+        set +e
         locust "${LOCUST_ARGS[@]}"
+        STATUS=$?
+        set -e
+        echo "exit_code=$STATUS" >> "$GITHUB_OUTPUT"
 
     - name: Parse results and enforce thresholds
       id: parse
       shell: bash
       run: |
-        set -euo pipefail
-        OUT_DIR="${{ steps.prep.outputs.out_dir }}"
-        CSV_PREFIX="${{ steps.prep.outputs.csv_prefix }}"
-        CSV_PATH="$OUT_DIR/${CSV_PREFIX}_stats.csv"
+        set -uo pipefail
+        CSV_BASE="${{ steps.prep.outputs.csv_base }}"
+        CSV_PATH="${CSV_BASE}_stats.csv"
+        LOCUST_EXIT="${{ steps.run_locust.outputs.exit_code }}"
+        # Always parse to produce outputs; do not enforce thresholds. Propagate Locust's exit code.
         python "$GITHUB_ACTION_PATH/src/parse_stats.py" \
           --csv-path "$CSV_PATH" \
-          ${INPUT_CHECK_FAIL_RATIO:+--check-fail-ratio "$INPUT_CHECK_FAIL_RATIO"} \
-          ${INPUT_CHECK_AVG_RESPONSE_TIME:+--check-avg-response-time "$INPUT_CHECK_AVG_RESPONSE_TIME"} \
-          ${INPUT_CHECK_P95_RESPONSE_TIME:+--check-p95-response-time "$INPUT_CHECK_P95_RESPONSE_TIME"} \
-          --github-output "$GITHUB_OUTPUT"
-      env:
-        INPUT_CHECK_FAIL_RATIO: ${{ inputs.check_fail_ratio }}
-        INPUT_CHECK_AVG_RESPONSE_TIME: ${{ inputs.check_avg_response_time }}
-        INPUT_CHECK_P95_RESPONSE_TIME: ${{ inputs.check_p95_response_time }}
+          --github-output "$GITHUB_OUTPUT" || true
+        exit "$LOCUST_EXIT"
 
     - name: Upload artifacts (optional)
       if: ${{ inputs.upload_artifacts == 'true' }}

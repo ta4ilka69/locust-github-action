@@ -1,0 +1,70 @@
+name: Store Example
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  store-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python (cached)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: examples/store/requirements.txt
+      - name: Install app deps
+        run: |
+          pip install -r examples/store/requirements.txt
+          pip install locust
+
+      - name: Start store server
+        run: |
+          nohup python examples/store/server.py > store-server.log 2>&1 &
+          echo $! > store-server.pid
+          sleep 2
+
+      - name: Run store Locust test (action)
+        uses: ./.
+        with:
+          locust_file: examples/store/locustfile.py
+          args: "--host http://127.0.0.1:8001 -u 4 -r 4 -t 8s"
+          csv_base: store-report/stats
+          html_report: true
+          upload_artifacts: false
+
+      - name: Verify store CSV exists
+        run: |
+          test -f store-report/stats_stats.csv
+
+      - name: Stop store server
+        if: always()
+        run: |
+          if [ -f store-server.pid ]; then kill "$(cat store-server.pid)" || true; fi
+
+  store-app-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python (cached)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: examples/store/requirements.txt
+      - name: Install app deps
+        run: |
+          pip install -r examples/store/requirements.txt
+          pip install locust
+      - name: Run store script
+        run: |
+          bash examples/store/run.sh
+      - name: Verify store CSV exists
+        run: |
+          test -f store-report/stats_stats.csv
+
+
