@@ -110,7 +110,7 @@ Then call this action:
 The action:
 
 1. Runs Locust headless with `--csv` (and `--html` if enabled), passing through your `args` and optional `config_file`.
-2. Parses the generated `<csv_prefix>_stats.csv` via `src/parse_stats.py` (using the `Aggregated` row) and derives:
+2. Parses the generated `<csv_base>_stats.csv` via `src/parse_stats.py` (using the `Aggregated` row) and derives:
    - Failure ratio (failures/requests)
    - Average response time (from `Aggregated`)
    - P95 (from `Aggregated`)
